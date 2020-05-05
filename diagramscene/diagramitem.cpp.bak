@@ -1,0 +1,101 @@
+#include "diagramitem.h"
+#include "arrow.h"
+#include <QGraphicsScene>
+#include <QGraphicsSceneContextMenuEvent>
+#include <QMenu>
+#include <QPainter>
+#include <QDebug>
+
+//自定义绘制的多边形图形项  基类是多边形图形项
+DiagramItem::DiagramItem(DiagramType diagramType, QMenu *contextMenu,
+             QGraphicsItem *parent) : QGraphicsPolygonItem(parent)
+{
+    myDiagramType = diagramType;//本图形项的形状
+    myContextMenu = contextMenu;
+
+    switch (myDiagramType)//多边形
+    {
+        case Conditional://棱形
+            myPolygon << QPointF(-100, 0) << QPointF(0, 100)
+                      << QPointF(100, 0) << QPointF(0, -100)
+                      << QPointF(-100, 0);
+            break;
+        case Step://正方形
+            myPolygon << QPointF(-100, -100) << QPointF(100, -100)
+                      << QPointF(100, 100) << QPointF(-100, 100)
+                      << QPointF(-100, -100);
+            break;
+        default://平行四边形
+            myPolygon << QPointF(-120, -80) << QPointF(-70, 80)
+                      << QPointF(120, 80) << QPointF(70, -80)
+                      << QPointF(-120, -80);
+            break;
+    }
+    setPolygon(myPolygon);
+    setFlag(QGraphicsItem::ItemIsMovable, true);//可移动
+    setFlag(QGraphicsItem::ItemIsSelectable, true);//可选中
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);//(猜测：图形项可发送位置变化信号)
+}
+
+//移除和本多边形相连的一个箭头
+void DiagramItem::removeArrow(Arrow *arrow)
+{
+    int index = arrows.indexOf(arrow);
+    if (index != -1)
+    {
+        arrows.removeAt(index);
+    }
+}
+
+//移除和本多边形相连的所有箭头
+void DiagramItem::removeArrows()
+{
+    foreach (Arrow *arrow, arrows)
+    {
+        arrow->startItem()->removeArrow(arrow);
+        arrow->endItem()->removeArrow(arrow);
+        scene()->removeItem(arrow);
+        delete arrow;
+    }
+}
+
+//增加箭头
+void DiagramItem::addArrow(Arrow *arrow)
+{
+    arrows.append(arrow);
+}
+
+//绘制图形
+QPixmap DiagramItem::image() const
+{
+    QPixmap pixmap(250, 250);
+    pixmap.fill(Qt::transparent);//用透明色填充
+
+    QPainter painter(&pixmap);//在图像上绘制多边形
+    painter.setPen(QPen(Qt::black, 8));
+    painter.translate(125, 125);
+    painter.drawPolyline(myPolygon);
+
+    return pixmap;
+}
+
+//右键菜单事件 右击的多边形设为选中
+void DiagramItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+{
+    scene()->clearSelection();//如果之前选中了场景中的其他目标，则取消选择
+    setSelected(true);//设置当前多边形为被选择目标（被选中会被虚线框起来）
+    myContextMenu->exec(event->screenPos());//在鼠标光标处弹出右键菜单
+}
+
+//多边形图形项改变时，连接在其上的所有箭头也要重绘（更新位置）
+QVariant DiagramItem::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (change == QGraphicsItem::ItemPositionChange)
+    {
+        foreach (Arrow *arrow, arrows)
+        {
+            arrow->updatePosition();
+        }
+    }
+    return value;
+}

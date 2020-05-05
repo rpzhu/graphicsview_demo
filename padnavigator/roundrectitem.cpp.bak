@@ -1,0 +1,69 @@
+#include "roundrectitem.h"
+#include <QApplication>
+#include <QPainter>
+#include <QPalette>
+
+//圆角矩形图形项
+RoundRectItem::RoundRectItem(const QRectF &bounds, const QColor &color,
+                             QGraphicsItem *parent)
+    : QGraphicsObject(parent), fillRect(false), bounds(bounds)
+{
+    //线性渐变设置
+    gradient.setStart(bounds.topLeft());//从本图形项的左上方开始
+    gradient.setFinalStop(bounds.bottomRight());//到本图形项右下方结束
+    gradient.setColorAt(0, color);
+    gradient.setColorAt(1, color.dark(200));
+    setCacheMode(DeviceCoordinateCache);
+}
+
+QPixmap RoundRectItem::pixmap() const
+{
+    return pix;
+}
+void RoundRectItem::setPixmap(const QPixmap &pixmap)
+{
+    pix = pixmap;
+    update();
+}
+
+QRectF RoundRectItem::boundingRect() const
+{
+    return bounds.adjusted(0, 0, 2, 2);
+}
+
+void RoundRectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                          QWidget *widget)
+{
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(QColor(0, 0, 0, 64));
+    painter->drawRoundRect(bounds.translated(2, 2));//绘制圆角矩形
+
+    if (fillRect)//设置了填充矩形，用系统调色板的画刷设置绘制画刷
+    {
+        painter->setBrush(QApplication::palette().brush(QPalette::Window));
+    }
+    else//用渐变设置画刷
+    {
+        painter->setBrush(gradient);
+    }
+    painter->setPen(QPen(Qt::black, 1));
+    painter->drawRoundRect(bounds);
+
+    if (!pix.isNull())
+    {
+        painter->scale(1.95, 1.95);//缩放
+        painter->drawPixmap(-pix.width() / 2, -pix.height() / 2, pix);
+    }
+}
+
+bool RoundRectItem::fill() const
+{
+    return fillRect;
+}
+void RoundRectItem::setFill(bool fill)
+{
+    fillRect = fill;
+    update();
+}

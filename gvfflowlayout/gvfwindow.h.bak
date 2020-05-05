@@ -1,0 +1,19 @@
+#include <QGraphicsWidget>
+#include <QGraphicsView>
+
+class gvfWindow : public QGraphicsWidget
+{
+    Q_OBJECT
+
+public:
+    gvfWindow();
+};
+
+
+class showgvfWindow : public QGraphicsView
+{
+    Q_OBJECT
+
+public:
+    explicit showgvfWindow(QWidget *parent = nullptr);
+};

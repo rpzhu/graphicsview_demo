@@ -1,0 +1,264 @@
+#include "flippablepad.h"
+#include "padnavigator.h"
+#include "splashitem.h"
+#include <QDebug>
+
+#ifndef QT_NO_OPENGL
+#include <QtOpenGL>
+#else
+#include <QtWidgets>
+#endif
+
+//导航面板 视图
+PadNavigator::PadNavigator(const QSize &size, QWidget *parent)
+    : QGraphicsView(parent)
+{
+    setAttribute(Qt::WA_DeleteOnClose);
+    setWindowFlags(Qt::WindowStaysOnTopHint);
+    setWindowFlags(windowFlags() |Qt::Dialog);
+    setWindowModality(Qt::ApplicationModal); //阻塞除当前窗体之外的所有的窗体
+
+    //可翻转pad
+    FlippablePad *pad = new FlippablePad(size);
+    //QGraphicsRotation控制图形项的旋转
+    QGraphicsRotation *flipRotation = new QGraphicsRotation(pad);
+    flipRotation->setAxis(Qt::YAxis);//flipRotation使pad沿Y轴旋转
+
+    QGraphicsRotation *xRotation = new QGraphicsRotation(pad);
+    xRotation->setAxis(Qt::YAxis);//xRotation使pad沿Y轴旋转
+
+    QGraphicsRotation *yRotation = new QGraphicsRotation(pad);
+    yRotation->setAxis(Qt::XAxis);//yRotation使pad沿X轴旋转
+
+    //按照转换列表中的旋转设置进行变换
+    pad->setTransformations(QList<QGraphicsTransform *>() << flipRotation << xRotation << yRotation);
+
+    QWidget *widget = new QWidget;
+    form.setupUi(widget);//form.ui文件设置为该部件的界面
+    form.hostName->setFocus();
+
+    QGraphicsProxyWidget *backItem = new QGraphicsProxyWidget(pad);
+    backItem->setWidget(widget);//将此部件转为图形项 将ui转为图形项
+    backItem->setVisible(false);
+    backItem->setFocus();
+    backItem->setCacheMode(QGraphicsItem::ItemCoordinateCache);
+
+    const QRectF r = backItem->rect();
+    qDebug()<<r.height()<<" "<<r.width();
+
+    //绕Y轴旋转180°，旋转中心为矩形中心
+    backItem->setTransform(QTransform().rotate(180, Qt::YAxis).translate(-r.width()/2, -r.height()/2));
+
+    SplashItem *splash = new SplashItem;//提示文字
+    splash->setZValue(1);
+
+    //为提示文字的矩形的图形项的y属性、不透明度属性创建动画
+    QPropertyAnimation *smoothSplashMove = new QPropertyAnimation(splash, "y");
+    smoothSplashMove->setEasingCurve(QEasingCurve::InQuad);
+    smoothSplashMove->setDuration(2000);
+    QPropertyAnimation *smoothSplashOpacity = new QPropertyAnimation(splash, "opacity");
+    smoothSplashOpacity->setDuration(2000);
+
+    //选中的项的圆角矩形
+    RoundRectItem *selectionItem = new RoundRectItem(QRectF(-60, -60, 120, 120), Qt::red, pad);
+    selectionItem->setZValue(0.5);//在其他圆角矩形图形项之下
+    //选中的项的圆角矩形的动画
+    QPropertyAnimation *smoothXSelection = new QPropertyAnimation(selectionItem, "x");
+    smoothXSelection->setDuration(2000);
+    smoothXSelection->setEasingCurve(QEasingCurve::InOutQuad);
+
+    QPropertyAnimation *smoothYSelection = new QPropertyAnimation(selectionItem, "y");
+    smoothYSelection->setDuration(2000);
+    smoothYSelection->setEasingCurve(QEasingCurve::InOutQuad);
+
+    QPropertyAnimation *smoothXRotation = new QPropertyAnimation(xRotation, "angle");
+    smoothXRotation->setDuration(2000);
+    smoothXRotation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    QPropertyAnimation *smoothYRotation = new QPropertyAnimation(yRotation, "angle");
+    smoothYRotation->setDuration(2000);
+    smoothYRotation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    //pad沿Y轴旋转时角度变化的动画1
+    QPropertyAnimation *smoothFlipRotation = new QPropertyAnimation(flipRotation, "angle");
+    smoothFlipRotation->setDuration(500);
+    smoothFlipRotation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    //pad沿X轴旋转时角度变化的动画
+    QPropertyAnimation *smoothFlipXRotation = new QPropertyAnimation(xRotation, "angle");
+    smoothFlipXRotation->setDuration(500);
+    smoothFlipXRotation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    //pad沿Y轴旋转时角度变化的动画2
+    QPropertyAnimation *smoothFlipYRotation = new QPropertyAnimation(yRotation, "angle");
+    smoothFlipYRotation->setDuration(500);
+    smoothFlipYRotation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    //pad尺寸变化动画：5秒内从1->0.2->1
+    QPropertyAnimation *smoothFlipScale = new QPropertyAnimation(pad, "scale");
+    smoothFlipScale->setDuration(5000);
+    smoothFlipScale->setEasingCurve(QEasingCurve::InOutQuad);
+    smoothFlipScale->setKeyValueAt(0, qvariant_cast<qreal>(1.0));
+    smoothFlipScale->setKeyValueAt(0.5, qvariant_cast<qreal>(0.2));
+    smoothFlipScale->setKeyValueAt(1, qvariant_cast<qreal>(1.0));
+
+    //动画集合
+    QParallelAnimationGroup *flipAnimation = new QParallelAnimationGroup(this);
+    flipAnimation->addAnimation(smoothFlipRotation);
+    flipAnimation->addAnimation(smoothFlipScale);
+    flipAnimation->addAnimation(smoothFlipXRotation);
+    flipAnimation->addAnimation(smoothFlipYRotation);
+
+    //翻转动画延迟属性分配 ******
+    QPropertyAnimation *setFillAnimation = new QPropertyAnimation(pad, "fill");
+    setFillAnimation->setDuration(0);
+
+    QPropertyAnimation *setBackItemVisibleAnimation = new QPropertyAnimation(backItem, "visible");
+    setBackItemVisibleAnimation->setDuration(0);
+
+    QPropertyAnimation *setSelectionItemVisibleAnimation = new QPropertyAnimation(selectionItem, "visible");
+    setSelectionItemVisibleAnimation->setDuration(0);
+
+    //QSequentialAnimationGroup 串行动画容器，根据添加到动画组的顺序播放动画
+    QSequentialAnimationGroup *setVariablesSequence = new QSequentialAnimationGroup;
+    setVariablesSequence->addPause(250);
+    setVariablesSequence->addAnimation(setBackItemVisibleAnimation);
+    setVariablesSequence->addAnimation(setSelectionItemVisibleAnimation);
+    setVariablesSequence->addAnimation(setFillAnimation);
+
+    flipAnimation->addAnimation(setVariablesSequence);
+
+    //状态机
+    QStateMachine *stateMachine = new QStateMachine(this);
+
+    QState *splashState = new QState(stateMachine);
+
+    QState *frontState = new QState(stateMachine);//变换前状态
+    frontState->assignProperty(pad, "fill", false);
+    frontState->assignProperty(splash, "opacity", 0.0);
+    frontState->assignProperty(backItem, "visible", false);
+    frontState->assignProperty(flipRotation, "angle", qvariant_cast<qreal>(0.0));
+    frontState->assignProperty(selectionItem, "visible", true);
+
+    QHistoryState *historyState = new QHistoryState(frontState);
+
+    QState *backState = new QState(stateMachine);//变换后状态
+    backState->assignProperty(pad, "fill", true);
+    backState->assignProperty(backItem, "visible", true);
+    backState->assignProperty(xRotation, "angle", qvariant_cast<qreal>(0.0));
+    backState->assignProperty(yRotation, "angle", qvariant_cast<qreal>(0.0));
+    backState->assignProperty(flipRotation, "angle", qvariant_cast<qreal>(180.0));
+    backState->assignProperty(selectionItem, "visible", false);
+
+    stateMachine->addDefaultAnimation(smoothXRotation);//状态机添加状态的动画
+    stateMachine->addDefaultAnimation(smoothYRotation);
+    stateMachine->addDefaultAnimation(smoothXSelection);
+    stateMachine->addDefaultAnimation(smoothYSelection);
+    stateMachine->setInitialState(splashState);
+
+    //事件转换 键盘事件引发状态的转换
+    QEventTransition *anyKeyTransition = new QEventTransition(this, QEvent::KeyPress, splashState);
+    anyKeyTransition->setTargetState(frontState);
+    anyKeyTransition->addAnimation(smoothSplashMove);
+    anyKeyTransition->addAnimation(smoothSplashOpacity);
+
+    //回车键事件转换
+    QKeyEventTransition *enterTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Enter, backState);
+    enterTransition->setTargetState(historyState);
+    enterTransition->addAnimation(flipAnimation);
+
+    QKeyEventTransition *backEnterTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Enter, frontState);
+    backEnterTransition->setTargetState(backState);
+    backEnterTransition->addAnimation(flipAnimation);
+
+    //后退键事件转换
+    QKeyEventTransition *returnTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Return, backState);
+    returnTransition->setTargetState(historyState);
+    returnTransition->addAnimation(flipAnimation);
+
+    QKeyEventTransition *backReturnTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Return, frontState);
+    backReturnTransition->setTargetState(backState);
+    backReturnTransition->addAnimation(flipAnimation);
+
+    int columns = size.width();
+    int rows = size.height();
+    QVector< QVector< QState * > > stateGrid;
+    stateGrid.resize(rows);
+    //创建9个状态 3*3
+    for (int y = 0; y < rows; ++y)
+    {
+        stateGrid[y].resize(columns);
+        for (int x = 0; x < columns; ++x)
+        {
+            stateGrid[y][x] = new QState(frontState);
+        }
+    }
+    frontState->setInitialState(stateGrid[0][0]);
+    selectionItem->setPos(pad->iconAt(0, 0)->pos());
+
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < columns; ++x)
+        {
+            QState *state = stateGrid[y][x];
+
+            //方向键引发状态转换
+            QKeyEventTransition *rightTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Right, state);
+            rightTransition->setTargetState(stateGrid[y][(x + 1) % columns]);
+
+            QKeyEventTransition *leftTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Left, state);
+            leftTransition->setTargetState(stateGrid[y][((x - 1) + columns) % columns]);
+
+            QKeyEventTransition *downTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Down, state);
+            downTransition->setTargetState(stateGrid[(y + 1) % rows][x]);
+
+            QKeyEventTransition *upTransition = new QKeyEventTransition(this, QEvent::KeyPress, Qt::Key_Up, state);
+            upTransition->setTargetState(stateGrid[((y - 1) + rows) % rows][x]);
+
+            RoundRectItem *icon = pad->iconAt(x, y);//当前圆角矩形项
+            state->assignProperty(xRotation, "angle", -icon->x() / 6.0);//为当前状态设置动画，旋转角度和当前圆角矩形项的位置相关联
+            state->assignProperty(yRotation, "angle", icon->y() / 6.0);
+            state->assignProperty(selectionItem, "x", icon->x());
+            state->assignProperty(selectionItem, "y", icon->y());
+            frontState->assignProperty(icon, "visible", true);
+            backState->assignProperty(icon, "visible", false);
+
+            QPropertyAnimation *setIconVisibleAnimation = new QPropertyAnimation(icon, "visible");
+            setIconVisibleAnimation->setDuration(0);
+            setVariablesSequence->addAnimation(setIconVisibleAnimation);
+        }
+    }
+
+    //场景
+    QGraphicsScene *scene = new QGraphicsScene(this);
+    scene->setBackgroundBrush(QPixmap(":/images/blue_angle_swirl.jpg"));
+    scene->setItemIndexMethod(QGraphicsScene::NoIndex);
+    scene->addItem(pad);
+    scene->setSceneRect(scene->itemsBoundingRect());
+    setScene(scene);
+
+    const QRectF sbr = splash->boundingRect();
+    splash->setPos(-sbr.width() / 2, scene->sceneRect().top() - 2);
+    frontState->assignProperty(splash, "y", splash->y() - 100.0);
+    scene->addItem(splash);
+
+    //视图设置
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setMinimumSize(50, 50);
+    setViewportUpdateMode(FullViewportUpdate);
+    setCacheMode(CacheBackground);
+    setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing);
+
+#ifndef QT_NO_OPENGL
+    setViewport(new QOpenGLWidget);
+#endif
+
+    stateMachine->start();
+}
+
+void PadNavigator::resizeEvent(QResizeEvent *event)
+{
+    QGraphicsView::resizeEvent(event);
+    fitInView(scene()->sceneRect(), Qt::KeepAspectRatio);
+}

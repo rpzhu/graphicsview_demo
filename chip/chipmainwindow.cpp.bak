@@ -1,0 +1,92 @@
+#include "chip.h"
+#include "chipmainwindow.h"
+#include "view.h"
+#include <QHBoxLayout>
+#include <QSplitter>
+
+ChipMainWindow::ChipMainWindow(QWidget *parent)
+    : QWidget(parent)
+{
+    setAttribute(Qt::WA_DeleteOnClose);
+    setWindowFlags(Qt::WindowStaysOnTopHint);
+    setWindowFlags(windowFlags() |Qt::Dialog);
+    setWindowModality(Qt::ApplicationModal); //阻塞除当前窗体之外的所有的窗体
+
+    populateScene();//创建并填充场景
+
+    //创建两个切分窗口对象 水平排列 用做上下切分 （若未指定排列方式 默认是水平的）
+    h1Splitter = new QSplitter(Qt::Horizontal,0);
+    h2Splitter = new QSplitter(Qt::Horizontal,0);
+
+    //再使用一个垂直排列的切分对象 将两个水平的加入 得到‘田’字形的窗口
+    QSplitter *vSplitter = new QSplitter;
+    vSplitter->setOrientation(Qt::Vertical);//垂直排列
+    //vSplitter->setOrientation(Qt::Horizontal);
+    vSplitter->addWidget(h1Splitter);
+    vSplitter->addWidget(h2Splitter);
+
+    //创建4个视图显示场景的内容 分别放入四个分割窗口
+    drilldownView *view = new drilldownView("左上视图：");
+    view->view()->setScene(scene);
+    h1Splitter->addWidget(view);
+
+    view = new drilldownView("右上视图：");
+    view->view()->setScene(scene);
+    h1Splitter->addWidget(view);
+
+    view = new drilldownView("左下视图：");
+    view->view()->setScene(scene);
+    h2Splitter->addWidget(view);
+
+    view = new drilldownView("右下视图：");
+    view->view()->setScene(scene);
+    h2Splitter->addWidget(view);
+
+    //在主窗口显示分割窗口
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->addWidget(vSplitter);
+    setLayout(layout);
+
+    setWindowTitle(tr("模拟芯片"));
+    setMinimumSize(1463,720);
+}
+
+//填充场景
+void ChipMainWindow::populateScene()
+{
+    scene = new QGraphicsScene;
+
+    //QImage image(":/qt4logo.png");
+    QImage image(":/img.jpg");
+
+    int xx = 0;
+    int nitems = 0;
+
+    //每个切分窗口绘制4万(200 * 200)个芯片。一行行地绘制
+    //每个图形项的矩形范围是110*70
+    //场景的原点是中心
+    //得到的场景左上角坐标（-11000，-7000） 右下角坐标（11000,7000）
+    for (int i = -11000; i < 11000; i += 110)//外圈200次循环
+    {
+        ++xx;
+        int yy = 0;
+        for (int j = -7000; j < 7000; j += 70)//内圈200次循环
+        {
+            ++yy;
+            //x,y的范围均为[0，1) 比例
+            qreal x = (i + 11000) / 22000.0;
+            qreal y = (j + 7000) / 14000.0;
+
+            //用图片对应点的像素值初始化color
+            QColor color(image.pixel(int(image.width() * x), int(image.height() * y)));
+
+            QGraphicsItem *item = new Chip(color, xx, yy);//图形项
+
+            //设置在焦点增加芯片
+            item->setPos(QPointF(i, j));
+            scene->addItem(item);
+
+            ++nitems;
+        }
+    }
+}

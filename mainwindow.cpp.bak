@@ -1,0 +1,237 @@
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "flowlayout.h"
+#include <QPushButton>
+#include <QDesktopWidget>
+#include "chip/chipmainwindow.h"
+#include <QDebug>
+#include "anchorlayout_widget.h"
+#include "basicgraphicslayouts/showwindow.h"
+#include "collidingmice/mousewindow.h"
+#include "diagramscene/diagramscene_MainWindow.h"
+#include "dragdroprobot/robot_window.h"
+#include "drilldown/drilldown_view.h"
+#include "elasticnodes/graphwidget.h"
+#include "embeddeddialogs/embeddeddialogwindow.h"
+#include "fademessage/fademessage.h"
+#include "gvfflowlayout/gvfwindow.h"
+#include "lighting/lighting.h"
+#include "padnavigator/padnavigator.h"
+#include "weatheranchorlayout/weatheranchor.h"
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    QPalette palette;
+    palette.setColor(QPalette::Background,QColor(255,255,255));
+    setAutoFillBackground(true);
+    setPalette(palette);
+
+    ui->scrollArea->viewport()->setStyleSheet("background-color:transparent;");
+    flowlayout = new FlowLayout(10,10,10,10,10,10);
+    ui->scrollAreaWidgetContents->setLayout(flowlayout);
+
+    desktop = QApplication::desktop();
+
+    init_add_btn();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::init_add_btn()
+{
+    QString style = "QPushButton{border-style: none;border: 0px;color: #FFFFFF;border-radius:6px;background: #00beac;font-size:22px;font-weight:bold;}"
+                    "QPushButton:hover{background: #20c9b3;}"
+                    "QPushButton:pressed{background: #01968c;}"
+                    "QToolTip{border:1px solid rgb(118, 118, 118);border-radius:6px;background-color: #fffffe; color:#484848; font-size:20px;}";
+
+    QSize size = QSize(270,40);
+
+    QPushButton * btn = new QPushButton("模拟芯片",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        ChipMainWindow * w = new ChipMainWindow;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("图形视图框架锚布局1",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        anchorlayout_widget * w = new anchorlayout_widget;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("图形视图框架锚布局2",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        anchorlayout_widget2 * w = new anchorlayout_widget2;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("图形视图框架锚布局3",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        weatheranchor::GraphicsView * w = new weatheranchor::GraphicsView;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+
+    btn = new QPushButton("图形视图框架布局管理器",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        showWindow * w = new showWindow;
+        w->show();
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("碰撞的小老鼠",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        mouseWindow * w = new mouseWindow;
+        w->show();
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+    });
+    flowlayout->addWidget(btn);
+
+
+    btn = new QPushButton("绘制流程图",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        diagramscene_MainWindow * w = new diagramscene_MainWindow;
+        w->show();
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("拖曳机器人",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        Robot_window * w = new Robot_window;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("Drill Down",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        drilldown_View * w = new drilldown_View;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("弹性节点",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        GraphWidget * w = new GraphWidget;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("嵌入式对话框示例",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        embeddeddialogWindow * w = new embeddeddialogWindow;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("图形项着色",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        FadeMessage * w = new FadeMessage;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("图形试图框架流式布局",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        showgvfWindow * w = new showgvfWindow;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("光照和阴影",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        Lighting * w = new Lighting;
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+    btn = new QPushButton("Pad导航板",ui->scrollAreaWidgetContents);
+    btn->setFixedSize(size);
+    btn->setStyleSheet(style);
+    btn->setCursor(Qt::PointingHandCursor);
+    connect(btn,&QPushButton::clicked,[this]
+    {
+        PadNavigator * w = new PadNavigator(QSize(3, 3));
+        w->move((desktop->width() - w->width())/2,(desktop->height() - w->height())/2);
+        w->show();
+    });
+    flowlayout->addWidget(btn);
+
+}

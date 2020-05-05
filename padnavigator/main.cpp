@@ -1,0 +1,12 @@
+﻿#include "padnavigator.h"
+#include <QtWidgets/QtWidgets>
+
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+    Q_INIT_RESOURCE(padnavigator);
+
+    PadNavigator navigator(QSize(3, 3));
+    navigator.show();
+    return app.exec();
+}

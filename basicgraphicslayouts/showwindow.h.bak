@@ -1,0 +1,16 @@
+#ifndef SHOWWINDOW_H
+#define SHOWWINDOW_H
+
+#include <QWidget>
+
+class showWindow : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit showWindow(QWidget *parent = nullptr);
+
+signals:
+
+};
+
+#endif // SHOWWINDOW_H

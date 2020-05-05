@@ -1,0 +1,152 @@
+﻿#include "anchorlayout_widget.h"
+#include <QGraphicsAnchorLayout>
+#include <QGraphicsProxyWidget>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QHBoxLayout>
+#include <QPushButton>
+#pragma execution_character_set("utf-8")
+anchorlayout_widget::anchorlayout_widget(QWidget* parent)
+  : QWidget(parent)
+{
+    setAttribute(Qt::WA_DeleteOnClose);
+    setWindowFlags(Qt::WindowStaysOnTopHint);
+    setWindowFlags(windowFlags() | Qt::Dialog);
+    setWindowModality(Qt::ApplicationModal); //阻塞除当前窗体之外的所有的窗体
+
+    QGraphicsScene* scene = new QGraphicsScene; //场景
+    scene->setSceneRect(0, 0, 800, 480);
+
+    QSizeF minSize(30, 100);
+    QSizeF prefSize(210, 100);
+    QSizeF maxSize(300, 100);
+
+    QGraphicsProxyWidget* a = createItem(minSize, prefSize, maxSize, "A");
+    QGraphicsProxyWidget* b = createItem(minSize, prefSize, maxSize, "B");
+    QGraphicsProxyWidget* c = createItem(minSize, prefSize, maxSize, "C");
+    QGraphicsProxyWidget* d = createItem(minSize, prefSize, maxSize, "D");
+    QGraphicsProxyWidget* e = createItem(minSize, prefSize, maxSize, "E");
+    QGraphicsProxyWidget* f = createItem(QSizeF(30, 50), QSizeF(150, 50), maxSize, "F (overflow)");
+    QGraphicsProxyWidget* g = createItem(QSizeF(30, 50), QSizeF(30, 100), maxSize, "G (overflow)");
+
+    QGraphicsAnchorLayout* l = new QGraphicsAnchorLayout; //一个可以往里面添加图形项的布局
+    l->setMinimumSize(50, 50);
+    l->setSpacing(0);
+
+    //垂直
+    l->addAnchor(a, Qt::AnchorTop, l, Qt::AnchorTop); //a的顶部与l的顶部连接
+    l->addAnchor(b, Qt::AnchorTop, l, Qt::AnchorTop);
+
+    l->addAnchor(c, Qt::AnchorTop, a, Qt::AnchorBottom); //c的顶部与a的底部连接
+    l->addAnchor(c, Qt::AnchorTop, b, Qt::AnchorBottom);
+    l->addAnchor(c, Qt::AnchorBottom, d, Qt::AnchorTop);
+    l->addAnchor(c, Qt::AnchorBottom, e, Qt::AnchorTop);
+
+    l->addAnchor(d, Qt::AnchorBottom, l, Qt::AnchorBottom);
+    l->addAnchor(e, Qt::AnchorBottom, l, Qt::AnchorBottom);
+
+    l->addAnchor(c, Qt::AnchorTop, f, Qt::AnchorTop);
+    l->addAnchor(c, Qt::AnchorVerticalCenter, f, Qt::AnchorBottom);
+    l->addAnchor(f, Qt::AnchorBottom, g, Qt::AnchorTop);
+    l->addAnchor(c, Qt::AnchorBottom, g, Qt::AnchorBottom);
+
+    //水平
+    l->addAnchor(l, Qt::AnchorLeft, a, Qt::AnchorLeft);
+    l->addAnchor(l, Qt::AnchorLeft, d, Qt::AnchorLeft);
+    l->addAnchor(a, Qt::AnchorRight, b, Qt::AnchorLeft);
+
+    l->addAnchor(a, Qt::AnchorRight, c, Qt::AnchorLeft);
+    l->addAnchor(c, Qt::AnchorRight, e, Qt::AnchorLeft);
+
+    l->addAnchor(b, Qt::AnchorRight, l, Qt::AnchorRight);
+    l->addAnchor(e, Qt::AnchorRight, l, Qt::AnchorRight);
+    l->addAnchor(d, Qt::AnchorRight, e, Qt::AnchorLeft);
+
+    l->addAnchor(l, Qt::AnchorLeft, f, Qt::AnchorLeft);
+    l->addAnchor(l, Qt::AnchorLeft, g, Qt::AnchorLeft);
+    l->addAnchor(f, Qt::AnchorRight, g, Qt::AnchorRight);
+
+    QGraphicsWidget* w = new QGraphicsWidget(nullptr, Qt::Window); //图形项
+    //QGraphicsWidget是QGraphicsItem（图形项）类的派生类
+    w->setPos(20, 20);
+    w->setLayout(l);
+    w->setWindowTitle("图形项窗口");
+
+    scene->addItem(w); //图形项加入场景
+    //w比较大但也是图形项可以像在场景中移动图形项一样移动w
+    scene->setBackgroundBrush(Qt::darkGreen);
+    QGraphicsView* view = new QGraphicsView(scene, this); //视图
+    view->show();
+
+    QHBoxLayout* HB = new QHBoxLayout;
+    HB->addWidget(view);
+    setLayout(HB);
+
+    setMinimumSize(824, 504);
+}
+
+QGraphicsProxyWidget*
+anchorlayout_widget::createItem(const QSizeF& minimum,
+                                const QSizeF& preferred,
+                                const QSizeF& maximum,
+                                const QString& name)
+{
+    QGraphicsProxyWidget* w = new QGraphicsProxyWidget;
+    /*
+    QGraphicsProxyWidget类：它是QGraphicsItem（图形项）的一个子类，其实看做是一个代理类，
+    它将所有的QWidget转换为QGraphicsItem
+    */
+    w->setWidget(new QPushButton(name)); //新建一个按钮并将按钮转化为图形项setWidget(QWidget* w)
+    w->setData(0, name);
+    w->setMinimumSize(minimum);
+    w->setPreferredSize(preferred);
+    w->setMaximumSize(maximum);
+
+    w->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    return w;
+}
+
+anchorlayout_widget2::anchorlayout_widget2(QWidget* parent)
+  : QWidget(parent)
+{
+    setAttribute(Qt::WA_DeleteOnClose);
+    setWindowFlags(Qt::WindowStaysOnTopHint);
+    setWindowFlags(windowFlags() | Qt::Dialog);
+    setWindowModality(Qt::ApplicationModal); //阻塞除当前窗体之外的所有的窗体
+
+    QGraphicsScene* scene = new QGraphicsScene; //场景
+
+    Widget* a = new Widget(Qt::blue, Qt::white, "a");
+    a->setPreferredSize(100, 100);
+    Widget* b = new Widget(Qt::green, Qt::black, "b");
+    b->setPreferredSize(100, 100);
+    Widget* c = new Widget(Qt::red, Qt::black, "c");
+    c->setPreferredSize(100, 100);
+
+    //图形视图框架锚布局
+    QGraphicsAnchorLayout* layout = new QGraphicsAnchorLayout();
+    layout->addCornerAnchors(a, Qt::TopLeftCorner, layout, Qt::TopLeftCorner);         //左上角
+    layout->addAnchor(b, Qt::AnchorLeft, a, Qt::AnchorRight);                          //b在a的右方
+    layout->addAnchor(b, Qt::AnchorTop, a, Qt::AnchorBottom);                          //b在a的下方 即b在a的右下方
+    layout->addAnchor(b, Qt::AnchorBottom, c, Qt::AnchorTop);                          //b在c的上方
+    layout->addAnchors(b, c, Qt::Horizontal);                                          //b、c水平排列
+    layout->addCornerAnchors(c, Qt::BottomRightCorner, layout, Qt::BottomRightCorner); //c的右下角就是布局的右下角
+
+    QGraphicsWidget* w = new QGraphicsWidget(0, Qt::Window | Qt::CustomizeWindowHint | Qt::WindowTitleHint);
+    w->setPos(20, 20);
+    w->setMinimumSize(100, 100);
+    w->setPreferredSize(320, 240);
+    w->setLayout(layout); //w也是窗口部件，为此部件设置布局
+    w->setWindowTitle(QObject::tr("这是窗口、布局项、图形项"));
+    scene->addItem(w);
+
+    QGraphicsView* view = new QGraphicsView();
+    view->setScene(scene);
+    view->show();
+
+    QHBoxLayout* HB = new QHBoxLayout;
+    HB->addWidget(view);
+    setLayout(HB);
+
+    setMinimumSize(824, 504);
+}
